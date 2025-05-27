@@ -60,11 +60,11 @@ hisseler = df["Hisse Adı"].dropna().unique()
 secilen_hisseler = st.sidebar.multiselect("Hisse Adı", options=hisseler, default=hisseler)
 
 # Sektör filtresi
-if "Sektör" in df.columns:
-    sektorler = df["Sektör"].dropna().unique()
-    secilen_sektorler = st.sidebar.multiselect("Sektör", options=sektorler, default=sektorler)
-else:
-    secilen_sektorler = []
+#if "Sektör" in df.columns:
+#    sektorler = df["Sektör"].dropna().unique()
+#    secilen_sektorler = st.sidebar.multiselect("Sektör", options=sektorler, default=sektorler)
+#else:
+#    secilen_sektorler = []
 
 # Sayısal sütun filtreleri
 numeric_columns = df.select_dtypes(include='number').columns
