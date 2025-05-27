@@ -85,8 +85,8 @@ for col in numeric_columns:
 
 # Filtreleme
 filtered_df = df[df["Hisse Adı"].isin(secilen_hisseler)]
-if secilen_sektorler:
-    filtered_df = filtered_df[filtered_df["Sektör"].isin(secilen_sektorler)]
+#if secilen_sektorler:
+#    filtered_df = filtered_df[filtered_df["Sektör"].isin(secilen_sektorler)]
 
 for col, (min_val, max_val) in numeric_filters.items():
     filtered_df = filtered_df[filtered_df[col].between(min_val, max_val)]
