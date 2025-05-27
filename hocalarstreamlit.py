@@ -41,9 +41,16 @@ sheet2_cols = [
     "Net Borç/Favök", "F/K Oranı", "PD/DD Oranı", "Hisse Fiyatı"
 ]
 
+#df1 = read_public_google_sheet(sheet1_url, sheet1_cols)
+#df2 = read_public_google_sheet(sheet2_url, sheet2_cols)
+#df = pd.concat([df2, df1], axis=1)
+
 df1 = read_public_google_sheet(sheet1_url, sheet1_cols)
 df2 = read_public_google_sheet(sheet2_url, sheet2_cols)
-df = pd.concat([df2, df1], axis=1)
+
+# Güncellenmiş: Eksik hisseleri göstermesi ve eksik hücreleri "N/A" yapması için merge + fillna
+df = pd.merge(df2, df1, on="Hisse Adı", how="outer")
+df.fillna("N/A", inplace=True)
 
 # === Sidebar filtre arayüzü ===
 st.sidebar.header("Filtreler")
