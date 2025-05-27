@@ -7,11 +7,14 @@ def convert_edit_url_to_csv(url):
 
 def read_public_google_sheet(csv_url, selected_columns):
     df = pd.read_csv(csv_url)
+    df.columns = df.columns.str.strip()  # Sütun adlarındaki boşlukları temizle
     existing_columns = [col for col in selected_columns if col in df.columns]
     missing = set(selected_columns) - set(existing_columns)
     if missing:
         st.warning(f"Google Sheet'te eksik sütunlar: {missing}")
-    return df[existing_columns]
+    for col in missing:
+        df[col] = pd.NA  # Eksik sütunları ekle ve içini boş yap
+    return df[selected_columns]
 
 def convert_df_to_excel(df):
     output = BytesIO()
@@ -41,14 +44,10 @@ sheet2_cols = [
     "Net Borç/Favök", "F/K Oranı", "PD/DD Oranı", "Hisse Fiyatı"
 ]
 
-#df1 = read_public_google_sheet(sheet1_url, sheet1_cols)
-#df2 = read_public_google_sheet(sheet2_url, sheet2_cols)
-#df = pd.concat([df2, df1], axis=1)
-
 df1 = read_public_google_sheet(sheet1_url, sheet1_cols)
 df2 = read_public_google_sheet(sheet2_url, sheet2_cols)
 
-# Güncellenmiş: Eksik hisseleri göstermesi ve eksik hücreleri "N/A" yapması için merge + fillna
+# Tüm hisseleri koruyarak birleştir
 df = pd.merge(df2, df1, on="Hisse Adı", how="outer")
 df.fillna("N/A", inplace=True)
 
@@ -65,7 +64,7 @@ if "Sektör" in df.columns:
 else:
     secilen_sektorler = []
 
-# Numerik sütun filtreleri
+# Sayısal filtreler
 numeric_columns = df.select_dtypes(include='number').columns
 numeric_filters = {}
 
@@ -88,12 +87,14 @@ if secilen_sektorler:
     filtered_df = filtered_df[filtered_df["Sektör"].isin(secilen_sektorler)]
 
 for col, (min_val, max_val) in numeric_filters.items():
-    filtered_df = filtered_df[filtered_df[col].between(min_val, max_val)]
+    if col in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df[col].between(min_val, max_val)]
 
 # === Gösterim ===
 st.subheader("Filtrelenmiş Veri Tablosu")
 st.dataframe(filtered_df, use_container_width=True)
 
+# === Excel indirme ===
 st.download_button("Excel olarak indir",
                    convert_df_to_excel(filtered_df),
                    file_name="hisse_analizi_filtered.xlsx",
