@@ -27,72 +27,53 @@ st.title("Hocalar Hisse Analizi")
 sheet1_url = convert_edit_url_to_csv("https://docs.google.com/spreadsheets/d/1u9WT-P9dEoXYuCOX1ojkFUySeJVmznc6dEFzhq0Ob8M/edit?usp=drivesdk")
 sheet2_url = convert_edit_url_to_csv("https://docs.google.com/spreadsheets/d/1MnhlPTx6aD5a4xuqsVLRw3ktLmf-NwSpXtw_IteXIFs/edit?usp=drivesdk")
 
-# Verileri oku
 df1 = read_public_google_sheet(sheet1_url)
 df2 = read_public_google_sheet(sheet2_url)
 
-# Hisse adı sütun adlarını normalize et
+# "Ticker" varsa "Hisse Adı" olarak değiştir
 if "Ticker" in df1.columns:
     df1 = df1.rename(columns={"Ticker": "Hisse Adı"})
 if "Ticker" in df2.columns:
     df2 = df2.rename(columns={"Ticker": "Hisse Adı"})
 
-# Eğer her iki tabloda da "Hisse Adı" varsa birleştir
+# Birleştir
 if "Hisse Adı" in df1.columns and "Hisse Adı" in df2.columns:
     df = pd.merge(df2, df1, on="Hisse Adı", how="outer")
 else:
-    st.error(f"'Hisse Adı' sütunu her iki tabloda da olmalı. Mevcut sütunlar:\n"
-             f"Sheet1: {list(df1.columns)}\n"
-             f"Sheet2: {list(df2.columns)}")
+    st.error(f"'Hisse Adı' sütunu her iki tabloda da olmalı.\nSheet1: {list(df1.columns)}\nSheet2: {list(df2.columns)}")
     st.stop()
 
 df = df.fillna("N/A")
 
-# Sidebar filtreleme
 st.sidebar.header("Filtreler")
 
-# Hisse filtresi
-hisseler = df["Hisse Adı"].dropna().unique().tolist()
-secilen_hisseler = st.sidebar.multiselect("Hisse Adı", options=hisseler, default=hisseler)
+# === Kolon seçimi ===
+st.sidebar.subheader("Görünür Kolonlar")
+all_columns = df.columns.tolist()
+selected_columns = st.sidebar.multiselect("Kolonları seç", all_columns, default=all_columns)
 
-# Sektör filtresi (varsa)
-if "Sektör" in df.columns:
-    sektorler = df["Sektör"].dropna().unique().tolist()
-    secilen_sektorler = st.sidebar.multiselect("Sektör", options=sektorler, default=sektorler)
-else:
-    secilen_sektorler = []
+# === Kategorik filtreler ===
+for col in df.columns:
+    if df[col].nunique() < 100 and df[col].dtype == 'object':
+        options = df[col].dropna().unique().tolist()
+        selected_options = st.sidebar.multiselect(f"{col}", options, default=options)
+        df = df[df[col].isin(selected_options)]
 
-# Sayısal kolon filtreleri
-numeric_cols = df.select_dtypes(include='number').columns.tolist()
-numeric_filters = {}
-
-for col in numeric_cols:
+# === Sayısal filtreler ===
+for col in df.select_dtypes(include='number').columns:
     min_val = float(df[col].min())
     max_val = float(df[col].max())
     selected_range = st.sidebar.slider(
-        label=col,
-        min_value=min_val,
-        max_value=max_val,
-        value=(min_val, max_val),
-        step=(max_val - min_val) / 100 if max_val != min_val else 1.0
+        f"{col}", min_value=min_val, max_value=max_val,
+        value=(min_val, max_val), step=(max_val - min_val) / 100 if max_val != min_val else 1.0
     )
-    numeric_filters[col] = selected_range
+    df = df[df[col].between(*selected_range)]
 
-# Filtreleme
-filtered_df = df[df["Hisse Adı"].isin(secilen_hisseler)]
-if secilen_sektorler and "Sektör" in df.columns:
-    filtered_df = filtered_df[filtered_df["Sektör"].isin(secilen_sektorler)]
-
-for col, (min_val, max_val) in numeric_filters.items():
-    filtered_df = filtered_df[
-        pd.to_numeric(filtered_df[col], errors="coerce").between(min_val, max_val)
-    ]
-
-# Gösterim
+# === Gösterim ===
 st.subheader("Filtrelenmiş Veri Tablosu")
-st.dataframe(filtered_df, use_container_width=True)
+st.dataframe(df[selected_columns], use_container_width=True)
 
 st.download_button("Excel olarak indir",
-                   convert_df_to_excel(filtered_df),
+                   convert_df_to_excel(df[selected_columns]),
                    file_name="hisse_analizi_filtered.xlsx",
                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
