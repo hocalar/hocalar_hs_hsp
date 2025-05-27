@@ -6,14 +6,15 @@ def convert_edit_url_to_csv(url):
     return url.split("/edit")[0] + "/export?format=csv"
 
 def read_public_google_sheet(csv_url, selected_columns):
-    df = pd.read_csv(csv_url)
-    df.columns = df.columns.str.strip()  # Sütun adlarındaki boşlukları temizle
-    existing_columns = [col for col in selected_columns if col in df.columns]
-    missing = set(selected_columns) - set(existing_columns)
-    if missing:
-        st.warning(f"Google Sheet'te eksik sütunlar: {missing}")
-    for col in missing:
-        df[col] = pd.NA  # Eksik sütunları ekle ve içini boş yap
+    try:
+        df = pd.read_csv(csv_url)
+    except Exception as e:
+        st.error(f"Veri alınamadı: {e}")
+        return pd.DataFrame(columns=selected_columns)
+
+    for col in selected_columns:
+        if col not in df.columns:
+            df[col] = "N/A"
     return df[selected_columns]
 
 def convert_df_to_excel(df):
@@ -22,15 +23,15 @@ def convert_df_to_excel(df):
         df.to_excel(writer, index=False)
     return output.getvalue()
 
-# Sayfa ayarı
+# === Sayfa ayarı ===
 st.set_page_config(layout="wide")
 st.title("Hocalar Hisse Analizi")
 
-# CSV linkleri
+# === CSV linkleri ===
 sheet1_url = convert_edit_url_to_csv("https://docs.google.com/spreadsheets/d/1MnhlPTx6aD5a4xuqsVLRw3ktLmf-NwSpXtw_IteXIFs/edit?usp=drivesdk")
 sheet2_url = convert_edit_url_to_csv("https://docs.google.com/spreadsheets/d/1u9WT-P9dEoXYuCOX1ojkFUySeJVmznc6dEFzhq0Ob8M/edit?usp=drivesdk")
 
-# Kolonlar
+# === Kolonlar ===
 sheet1_cols = [
     "ATH Değişimi TL (%)", "Geçen Gün", "AVWAP", "AVWAP +4σ", "% Fark VWAP",
     "POC", "VAL", "VAH", "% Fark POC", "% Fark VAL", "VP Bant / ATH Aralığı (%)"
@@ -44,51 +45,22 @@ sheet2_cols = [
     "Net Borç/Favök", "F/K Oranı", "PD/DD Oranı", "Hisse Fiyatı"
 ]
 
+# === Verileri oku ===
 df1 = read_public_google_sheet(sheet1_url, sheet1_cols)
 df2 = read_public_google_sheet(sheet2_url, sheet2_cols)
 
-# Tüm hisseleri koruyarak birleştir
-df = pd.merge(df2, df1, on="Hisse Adı", how="outer")
-df.fillna("N/A", inplace=True)
+# === Hisse adlarına göre hizalanan birleşik tablo ===
+df = pd.concat([df2.reset_index(drop=True), df1.reset_index(drop=True)], axis=1)
 
-# === Sidebar filtre arayüzü ===
-st.sidebar.header("Filtreler")
+# === Gösterim ===
+st.subheader("Tüm Hisseler")
+st.dataframe(df, use_container_width=True)
 
-# Hisse ve sektör filtreleri
-hisseler = df["Hisse Adı"].dropna().unique()
-secilen_hisseler = st.sidebar.multiselect("Hisse Adı", options=hisseler, default=hisseler)
-
-if "Sektör" in df.columns:
-    sektorler = df["Sektör"].dropna().unique()
-    secilen_sektorler = st.sidebar.multiselect("Sektör", options=sektorler, default=sektorler)
-else:
-    secilen_sektorler = []
-
-# Sayısal filtreler
-numeric_columns = df.select_dtypes(include='number').columns
-numeric_filters = {}
-
-for col in numeric_columns:
-    min_val = float(df[col].min())
-    max_val = float(df[col].max())
-    step = (max_val - min_val) / 100 if max_val != min_val else 1
-    selected_range = st.sidebar.slider(
-        label=col,
-        min_value=min_val,
-        max_value=max_val,
-        value=(min_val, max_val),
-        step=step
-    )
-    numeric_filters[col] = selected_range
-
-# === Filtreleme işlemi ===
-filtered_df = df[df["Hisse Adı"].isin(secilen_hisseler)]
-if secilen_sektorler:
-    filtered_df = filtered_df[filtered_df["Sektör"].isin(secilen_sektorler)]
-
-for col, (min_val, max_val) in numeric_filters.items():
-    if col in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df[col].between(min_val, max_val)]
+# === Excel indirme ===
+st.download_button("Excel olarak indir",
+                   convert_df_to_excel(df),
+                   file_name="hisse_analizi_tam.xlsx",
+                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # === Gösterim ===
 st.subheader("Filtrelenmiş Veri Tablosu")
