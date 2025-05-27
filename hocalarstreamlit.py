@@ -56,7 +56,7 @@ df = pd.concat([df2.reset_index(drop=True), df1.reset_index(drop=True)], axis=1)
 st.sidebar.header("Filtreler")
 
 # Hisse Adı filtresi
-hisseler = df["Hisse Adı"].dropna().unique()
+hisseler = df["Hisse Adı"]  #.dropna().unique()
 secilen_hisseler = st.sidebar.multiselect("Hisse Adı", options=hisseler, default=hisseler)
 
 # Sektör filtresi
