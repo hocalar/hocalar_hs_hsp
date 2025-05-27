@@ -55,16 +55,16 @@ df = pd.concat([df2.reset_index(drop=True), df1.reset_index(drop=True)], axis=1)
 # Sidebar filtreler
 st.sidebar.header("Filtreler")
 
-# Hisse Adı filtresi
-hisseler = df["Hisse Adı"]  #.dropna().unique()
+# Hisse Adı filtresi (NaN dahil)
+hisseler = df["Hisse Adı"].fillna("N/A").unique()
 secilen_hisseler = st.sidebar.multiselect("Hisse Adı", options=hisseler, default=hisseler)
 
-# Sektör filtresi
-#if "Sektör" in df.columns:
-#    sektorler = df["Sektör"].dropna().unique()
-#    secilen_sektorler = st.sidebar.multiselect("Sektör", options=sektorler, default=sektorler)
-#else:
-#    secilen_sektorler = []
+# Sektör filtresi (NaN dahil)
+if "Sektör" in df.columns:
+    sektorler = df["Sektör"].fillna("N/A").unique()
+    secilen_sektorler = st.sidebar.multiselect("Sektör", options=sektorler, default=sektorler)
+else:
+    secilen_sektorler = []
 
 # Sayısal sütun filtreleri
 numeric_columns = df.select_dtypes(include='number').columns
@@ -84,9 +84,13 @@ for col in numeric_columns:
     numeric_filters[col] = selected_range
 
 # Filtreleme
-filtered_df = df[df["Hisse Adı"].isin(secilen_hisseler)]
-#if secilen_sektorler:
-#    filtered_df = filtered_df[filtered_df["Sektör"].isin(secilen_sektorler)]
+filtered_df = df.copy()
+filtered_df["Hisse Adı"] = filtered_df["Hisse Adı"].fillna("N/A")
+filtered_df["Sektör"] = filtered_df["Sektör"].fillna("N/A")
+
+filtered_df = filtered_df[filtered_df["Hisse Adı"].isin(secilen_hisseler)]
+if secilen_sektorler:
+    filtered_df = filtered_df[filtered_df["Sektör"].isin(secilen_sektorler)]
 
 for col, (min_val, max_val) in numeric_filters.items():
     filtered_df = filtered_df[filtered_df[col].between(min_val, max_val)]
