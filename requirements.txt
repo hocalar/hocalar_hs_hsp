@@ -1,5 +1,9 @@
-streamlit==1.32.2
-pandas==2.2.1
-st-aggrid==0.3.3  # veya alternatif: 
-streamlit-aggrid-community
-xlsxwriter==3.2.0
+streamlit
+pandas
+gspread
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+oauth2client
+st-aggrid
+xlsxwriter
