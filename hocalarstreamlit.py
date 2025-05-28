@@ -21,7 +21,7 @@ def convert_df_to_excel(df):
     return output.getvalue()
 
 st.set_page_config(layout="wide")
-st.title("Hocalar Hisse Analizi")
+st.title("Hisse Verileri Analizi")
 
 # Google Sheets CSV linkleri
 sheet1_url = convert_edit_url_to_csv("https://docs.google.com/spreadsheets/d/1u9WT-P9dEoXYuCOX1ojkFUySeJVmznc6dEFzhq0Ob8M/edit?usp=drivesdk")
