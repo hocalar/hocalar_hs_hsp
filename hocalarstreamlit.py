@@ -73,21 +73,29 @@ for col in df.select_dtypes(include='number').columns:
     clean_series = df[col].dropna()
 
     if clean_series.empty:
-        st.sidebar.markdown(f"**{col}**: Veriler eksik (yalnızca NaN).")
-        continue
+        continue  # NaN doluysa geç
 
     min_val = float(clean_series.min())
     max_val = float(clean_series.max())
 
+    # Eğer sadece tek bir değer varsa (örneğin 0) — filtreleme yapma
+    if min_val == max_val:
+        # İsteğe bağlı: slider yerine sabit bilgi göster
+        st.sidebar.markdown(f"**{col}**: Sabit değer ({min_val}), filtrelenmedi.")
+        continue
+
+    # Slider koy ama sadece kullanıcı değeri değiştirirse filtre uygula
     selected_range = st.sidebar.slider(
-        f"{col}", min_value=min_val, max_value=max_val,
-        value=(min_val, max_val), step=(max_val - min_val) / 100 if max_val != min_val else 1.0
+        f"{col}",
+        min_value=min_val,
+        max_value=max_val,
+        value=(min_val, max_val),
+        step=(max_val - min_val) / 100
     )
 
-    # YALNIZCA kullanıcı aralığı değiştirmişse filtre uygula
     if selected_range != (min_val, max_val):
         df = df[df[col].between(*selected_range)]
-
+        
 # === Gösterim ===
 st.subheader("Filtrelenmiş Veri Tablosu")
 st.dataframe(df[selected_columns], use_container_width=True)
